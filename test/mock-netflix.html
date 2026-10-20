@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Finto Netflix</title>
+<video id="v"></video>
+<script>
+  // Imita la forma dell'API interna di Netflix quanto basta per i test.
+  const video = document.getElementById('v');
+  const fake = { paused: true, timeMs: 0 };
+  const emit = (name) => video.dispatchEvent(new Event(name));
+  const player = {
+    isPaused: () => fake.paused,
+    getCurrentTime: () => fake.timeMs,
+    play: () => { fake.paused = false; emit('play'); },
+    pause: () => { fake.paused = true; emit('pause'); },
+    seek: (ms) => { fake.timeMs = ms; emit('seeked'); },
+  };
+  window.netflix = { appContext: { state: { playerApp: { getAPI: () => ({ videoPlayer: {
+    getAllPlayerSessionIds: () => ['watch-1'],
+    getVideoPlayerBySessionId: (id) => (id === 'watch-1' ? player : null),
+  } }) } } } };
+  // Simula un'azione dell'utente (non un comando remoto).
+  window.userPause = () => player.pause();
+</script>
