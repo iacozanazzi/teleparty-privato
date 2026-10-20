@@ -28,8 +28,9 @@ assert.deepEqual(await page.evaluate(() => __watchParty.state()),
 
 await page.evaluate(() => __watchParty.play());
 await page.evaluate(() => __watchParty.seek(60000));
-assert.deepEqual(await page.evaluate(() => __watchParty.state()),
-  { ready: true, playing: true, positionMs: 60000, titleId: '81234567' });
+const afterSeek = await page.evaluate(() => __watchParty.state());
+assert.equal(afterSeek.playing, true);
+assert.ok(Math.abs(afterSeek.positionMs - 60000) < 200, `posizione dopo il seek: ${afterSeek.positionMs}`);
 
 // Comando via postMessage, come farà il content script nella fase 2.
 const ack = await page.evaluate(() => new Promise((res) => {
@@ -41,13 +42,13 @@ assert.equal(ack.playing, false);
 
 // Un'azione dell'utente fuori dalla finestra di eco non deve essere marcata come eco.
 await page.waitForTimeout(800);
-await page.evaluate(() => userPause());
+await page.evaluate(() => userPlay());
 await page.waitForTimeout(100);
 
 console.log(logs.join('\n'));
 assert.ok(logs.some((l) => l.includes('play a 0.0s') && l.includes('(eco)')), 'play remoto marcato come eco');
 assert.ok(logs.some((l) => l.includes('seeked a 60.0s') && l.includes('(eco)')), 'seek remoto marcato come eco');
-assert.ok(logs.at(-1).includes('pause') && !logs.at(-1).includes('(eco)'), 'pausa utente non marcata come eco');
+assert.ok(logs.at(-1).includes('play') && !logs.at(-1).includes('(eco)'), 'play utente non marcato come eco');
 
 await ctx.close();
 console.log('OK: tutti i controlli passati');

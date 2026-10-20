@@ -3,21 +3,25 @@
 <title>Finto Netflix</title>
 <video id="v"></video>
 <script>
-  // Imita la forma dell'API interna di Netflix quanto basta per i test.
+  // Imita la forma dell'API interna di Netflix quanto basta per i test, con il tempo che scorre.
   const video = document.getElementById('v');
-  const fake = { paused: true, timeMs: 0 };
+  const fake = { paused: true, baseMs: 0, since: 0 };
   const emit = (name) => video.dispatchEvent(new Event(name));
+  const now = () => performance.now();
   const player = {
     isPaused: () => fake.paused,
-    getCurrentTime: () => fake.timeMs,
-    play: () => { fake.paused = false; emit('play'); },
-    pause: () => { fake.paused = true; emit('pause'); },
-    seek: (ms) => { fake.timeMs = ms; emit('seeked'); },
+    getCurrentTime: () => (fake.paused ? fake.baseMs : fake.baseMs + now() - fake.since),
+    // Come il vero player: nessun evento se lo stato non cambia.
+    play: () => { if (fake.paused) { fake.since = now(); fake.paused = false; emit('play'); } },
+    pause: () => { if (!fake.paused) { fake.baseMs = player.getCurrentTime(); fake.paused = true; emit('pause'); } },
+    seek: (ms) => { fake.baseMs = ms; fake.since = now(); emit('seeked'); },
   };
   window.netflix = { appContext: { state: { playerApp: { getAPI: () => ({ videoPlayer: {
     getAllPlayerSessionIds: () => ['watch-1'],
     getVideoPlayerBySessionId: (id) => (id === 'watch-1' ? player : null),
   } }) } } } };
-  // Simula un'azione dell'utente (non un comando remoto).
+  // Simulano azioni dell'utente, non comandi remoti.
+  window.userPlay = () => player.play();
   window.userPause = () => player.pause();
+  window.userSeek = (ms) => player.seek(ms);
 </script>
