@@ -2,24 +2,55 @@
 
 Estensione Chrome per guardare Netflix in sincrono con gli amici. Uso personale, codice scritto da zero: nessun file di Teleparty.
 
-## Stato: fase 1, controllo del player
+## Stato: fase 3, server online e link di invito
 
-L'estensione per ora non sincronizza nulla. Prova solo che riusciamo a comandare il player di Netflix senza errori.
+- Fase 1 provata su Netflix vero il 20 ottobre 2026: il seek di 60 secondi funziona senza errori.
+- Fase 2: più schede nella stessa stanza restano allineate su play, pausa e posizione.
+- Fase 3: il pulsante dell'estensione crea una stanza e copia il link di invito; il server va su Render.
 
-## Come provarla
+## Come si usa
 
-**Senza estensione.** Apri un titolo su Netflix, apri DevTools (F12), scheda Console, incolla `spike/console-test.js`. In 5 secondi mette in pausa, salta avanti di 60 secondi e riparte, stampando la posizione a ogni passo.
+1. Apri un titolo su Netflix.
+2. Clicca l'icona di Watch Party nella barra di Chrome, poi "Crea stanza". Il link viene copiato.
+3. Manda il link agli amici. Quando lo aprono, con l'estensione installata, entrano nella stanza.
+4. Play, pausa e salti di chiunque valgono per tutti. Il pannello mostra quante persone ci sono.
+
+La prima connessione della serata può impiegare circa un minuto: il server gratuito di Render dorme dopo 15 minuti senza uso e si sveglia alla prima richiesta.
+
+## Installare l'estensione (tu e gli amici)
+
+1. Scarica la cartella `extension/` (per gli amici: mandagliela in uno zip, il repo è privato).
+2. In Chrome apri `chrome://extensions` e attiva "Modalità sviluppatore" in alto a destra.
+3. "Carica estensione non pacchettizzata" e scegli la cartella `extension/`.
+
+## Server su Render
+
+Il file `render.yaml` descrive il servizio: piano gratuito, `npm ci --omit=dev`, `node server/index.js`. Dopo il deploy l'indirizzo del servizio va scritto in `extension/config.js` come `wss://<nome>.onrender.com`.
+
+## Come provare la fase 1 (solo il player)
+
+**Senza estensione.** Apri un titolo su Netflix, apri la console di DevTools (Mac `Cmd+Option+J`, Windows `Ctrl+Shift+J`), incolla `spike/console-test.js`. In 5 secondi mette in pausa, salta avanti di 60 secondi e riparte.
 
 **Con l'estensione.**
 
 1. `chrome://extensions`, attiva "Modalità sviluppatore", "Carica estensione non pacchettizzata", scegli la cartella `extension/`.
-2. Apri un titolo su Netflix, poi la console di DevTools.
+2. Apri un titolo su Netflix, poi la console.
 3. Prova `__watchParty.state()`, `__watchParty.pause()`, `__watchParty.seekBy(60000)`, `__watchParty.play()`.
-4. Nella console vedi le righe `[watch-party]` per ogni play, pausa e seek. Quelle causate da un comando sono marcate `(eco)`, quelle fatte da te con il mouse no.
 
-Per vedere le righe `[watch-party]` attiva il livello "Verbose" nel filtro della console.
+## Come provare la sync sul tuo computer, senza Render
 
-**Criterio per passare alla fase 2:** il seek di 60 secondi funziona senza l'errore Netflix M7375 e le righe `(eco)` compaiono solo per i comandi.
+Serve [Node.js](https://nodejs.org) installato.
+
+1. In questa cartella: `npm install`, poi `npm start`. Lascia la finestra aperta.
+2. Controlla che `extension/config.js` punti a `ws://localhost:8787` e ricarica l'estensione da `chrome://extensions`.
+3. Apri lo stesso titolo in due schede, aggiungendo all'indirizzo `?wpRoom=` seguito da un nome di almeno 16 caratteri, uguale nelle due schede. Esempio: `https://www.netflix.com/watch/81234567?wpRoom=serata-con-amici-2026`.
+4. Metti in pausa, salta avanti o riparti in una scheda: l'altra segue entro un secondo.
+
+Netflix può bloccare due video in contemporanea sullo stesso account, a seconda del tuo abbonamento.
+
+## Come funziona la sync
+
+Il server tiene per ogni stanza l'ultimo stato: in riproduzione o in pausa, posizione, e l'ora del server in cui valeva. Ogni scheda calcola dove dovrebbe essere adesso e corregge solo se lo scarto supera un secondo. I comandi arrivati dalla stanza non vengono rimandati indietro (soppressione dell'eco), e chi entra in una stanza si allinea agli altri invece di riportarli all'inizio.
 
 ## Test automatico
 
@@ -28,13 +59,18 @@ npm install
 npm test
 ```
 
-Carica l'estensione vera in Chromium e la prova su una pagina che imita l'API interna di Netflix (`test/mock-netflix.html`). Verifica i comandi, i messaggi tra i due script e la marcatura dell'eco. Non sostituisce la prova su Netflix vero.
+Carica l'estensione vera in Chromium e la prova su una pagina che imita l'API interna di Netflix (`test/mock-netflix.html`). `test/extension.test.mjs` verifica i comandi al player e la marcatura dell'eco; `test/sync.test.mjs` avvia il server e controlla che tre schede nella stessa stanza restino entro un secondo l'una dall'altra, anche dopo una caduta della connessione; `test/invite.test.mjs` crea una stanza dal popup, fa entrare un amico col link e lo fa uscire. Non sostituiscono la prova su Netflix vero.
 
 ## Struttura
 
 | File | Ruolo |
 | --- | --- |
 | `extension/page.js` | Gira nel mondo della pagina, unico file che tocca l'API di Netflix |
-| `extension/content.js` | Gira nel mondo isolato; per ora registra gli eventi, nella fase 2 parlerà col server |
+| `extension/content.js` | Gira nel mondo isolato: ponte tra player e server, correzione dello scarto |
+| `extension/background.js` | Service worker: tiene la connessione WebSocket di ogni scheda e si ricollega se cade |
+| `extension/popup.html`, `popup.js` | Pannello: crea stanza, copia link, esci |
+| `extension/config.js` | Indirizzo del server |
+| `server/index.js` | Server delle stanze |
+| `render.yaml` | Configurazione del servizio su Render |
 | `spike/console-test.js` | Prova da console, senza estensione |
 | `test/` | Test automatico con una finta pagina Netflix |
