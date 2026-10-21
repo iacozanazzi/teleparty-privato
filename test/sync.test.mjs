@@ -7,9 +7,10 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { startServer } from '../server/index.js';
+import { localExtension } from './local-extension.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const ext = join(root, 'extension');
+const ext = localExtension(join(root, 'extension'));
 const ROOM_URL = 'https://www.netflix.com/watch/81234567?wpRoom=stanza-di-prova-0123';
 const TOLERANCE_MS = 1000;
 

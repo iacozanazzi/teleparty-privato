@@ -25,7 +25,7 @@ La prima connessione della serata può impiegare circa un minuto: il server grat
 
 ## Server su Render
 
-Il file `render.yaml` descrive il servizio: piano gratuito, `npm ci --omit=dev`, `node server/index.js`. Dopo il deploy l'indirizzo del servizio va scritto in `extension/config.js` come `wss://<nome>.onrender.com`.
+Il file `render.yaml` descrive il servizio: piano gratuito, `npm ci --omit=dev`, `node server/index.js`. Il servizio è online su https://teleparty-privato.onrender.com (aprendolo nel browser deve comparire "ok"); `extension/config.js` punta a `wss://teleparty-privato.onrender.com`.
 
 ## Come provare la fase 1 (solo il player)
 
@@ -42,7 +42,7 @@ Il file `render.yaml` descrive il servizio: piano gratuito, `npm ci --omit=dev`,
 Serve [Node.js](https://nodejs.org) installato.
 
 1. In questa cartella: `npm install`, poi `npm start`. Lascia la finestra aperta.
-2. Controlla che `extension/config.js` punti a `ws://localhost:8787` e ricarica l'estensione da `chrome://extensions`.
+2. In `extension/config.js` metti temporaneamente `ws://localhost:8787` e ricarica l'estensione da `chrome://extensions`.
 3. Apri lo stesso titolo in due schede, aggiungendo all'indirizzo `?wpRoom=` seguito da un nome di almeno 16 caratteri, uguale nelle due schede. Esempio: `https://www.netflix.com/watch/81234567?wpRoom=serata-con-amici-2026`.
 4. Metti in pausa, salta avanti o riparti in una scheda: l'altra segue entro un secondo.
 
