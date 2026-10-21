@@ -56,6 +56,7 @@ async function render() {
       $('no-room').hidden = true;
       $('in-room').hidden = false;
       $('leave').hidden = true;
+      $('video').hidden = true;
       $('link').value = link;
       $('message').textContent = 'Stanza creata.';
       $('copy').onclick = () => copy(link);
@@ -70,6 +71,13 @@ async function render() {
   $('in-room').hidden = false;
   $('link').value = link;
   $('copy').onclick = () => copy(link);
+  const videoLabel = (on) => (on ? 'Chiudi videochiamata' : 'Avvia videochiamata');
+  $('video').textContent = videoLabel(status.video);
+  $('video').onclick = async () => {
+    const { video } = await chrome.tabs.sendMessage(tab.id, { type: 'video' });
+    $('video').textContent = videoLabel(video);
+    if (video) $('note').textContent = 'Anche l\'altra persona deve avviare la videochiamata dal suo pannello.';
+  };
   $('leave').onclick = async () => {
     await chrome.tabs.sendMessage(tab.id, { type: 'leave' });
     await chrome.tabs.update(tab.id, { url: `https://www.netflix.com/watch/${titleId}` });

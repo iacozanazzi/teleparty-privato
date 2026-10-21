@@ -118,11 +118,52 @@
 
   const ping = () => joined && port.postMessage({ type: 'ping', t0: Date.now() });
 
+  // Riquadro della videochiamata: una pagina dell'estensione in un iframe, così il permesso
+  // della camera è chiesto per l'estensione e non per netflix.com.
+  let videoFrame = null;
+
+  function openVideo() {
+    if (videoFrame) return;
+    videoFrame = document.createElement('iframe');
+    videoFrame.src = `${chrome.runtime.getURL('video.html')}#room=${encodeURIComponent(room)}`;
+    videoFrame.allow = 'camera; microphone; autoplay';
+    videoFrame.title = 'Videochiamata';
+    Object.assign(videoFrame.style, {
+      position: 'fixed', right: '16px', bottom: '96px', width: '320px', height: '240px',
+      border: '0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.5)', zIndex: '2147483647',
+    });
+    (document.fullscreenElement ?? document.body).append(videoFrame);
+  }
+
+  function closeVideo() {
+    videoFrame?.remove();
+    videoFrame = null;
+  }
+
+  window.addEventListener('message', (e) => {
+    if (videoFrame && e.source === videoFrame.contentWindow && e.data?.source === 'wp-video' && e.data.type === 'close') {
+      closeVideo();
+    }
+  });
+
+  // A schermo intero si vede solo l'elemento in fullscreen: il riquadro gli va spostato dentro.
+  // moveBefore lo sposta senza ricaricarlo, quindi la chiamata non cade.
+  document.addEventListener('fullscreenchange', () => {
+    const host = document.fullscreenElement ?? document.body;
+    if (!videoFrame || videoFrame.parentNode === host || host instanceof HTMLMediaElement) return;
+    if (host.moveBefore) host.moveBefore(videoFrame, null);
+  });
+
   // Domande dal popup.
   chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     if (msg.type === 'status') {
-      reply({ room, joined, members });
+      reply({ room, joined, members, video: Boolean(videoFrame) });
+    } else if (msg.type === 'video') {
+      if (room && !videoFrame) openVideo();
+      else closeVideo();
+      reply({ video: Boolean(videoFrame) });
     } else if (msg.type === 'leave') {
+      closeVideo();
       sessionStorage.removeItem('wpRoom');
       room = null;
       joined = false;
