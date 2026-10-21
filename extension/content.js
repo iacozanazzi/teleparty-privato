@@ -13,6 +13,7 @@
   const room = readRoom();
   let port = null;
   let joined = false;
+  let members = 0;
   let roomState = null;
   let readySince = null;
   let offsetMs = 0;
@@ -78,14 +79,21 @@
     }
   });
 
-  if (!room) return;
+  function connect() {
+    port = chrome.runtime.connect({ name: 'wp' });
+    port.onMessage.addListener(onServerMessage);
+    // Il service worker può essere fermato da Chrome: in quel caso ci si ricollega.
+    port.onDisconnect.addListener(() => {
+      joined = false;
+      if (room) setTimeout(connect, 1000);
+    });
+    port.postMessage({ type: 'join', room });
+  }
 
-  port = chrome.runtime.connect({ name: 'wp' });
-  const ping = () => port.postMessage({ type: 'ping', t0: Date.now() });
-
-  port.onMessage.addListener((msg) => {
+  function onServerMessage(msg) {
     if (msg.type === 'welcome') {
       offsetMs = msg.serverTime - Date.now();
+      bestRttMs = Infinity;
       joined = true;
       roomState = msg.state;
       // Più ping all'inizio: vale il campione con il viaggio più breve, come in NTP.
@@ -100,14 +108,33 @@
     } else if (msg.type === 'state') {
       roomState = msg.state;
       reconcile();
+    } else if (msg.type === 'members') {
+      members = msg.count;
     } else if (msg.type === 'closed') {
       joined = false;
-      console.warn('[watch-party] connessione al server chiusa');
+      console.warn('[watch-party] connessione al server persa, riprovo');
+    }
+  }
+
+  const ping = () => joined && port.postMessage({ type: 'ping', t0: Date.now() });
+
+  // Domande dal popup.
+  chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
+    if (msg.type === 'status') {
+      reply({ room, joined, members });
+    } else if (msg.type === 'leave') {
+      sessionStorage.removeItem('wpRoom');
+      room = null;
+      joined = false;
+      port?.disconnect();
+      reply({ ok: true });
     }
   });
-  port.postMessage({ type: 'join', room });
 
-  setInterval(() => joined && reconcile(), CHECK_EVERY_MS);
+  if (!room) return;
+  connect();
+
+  setInterval(() => joined && room && reconcile(), CHECK_EVERY_MS);
   // Tiene sveglio il service worker e aggiorna la misura dell'orologio.
   setInterval(ping, PING_EVERY_MS);
 })();

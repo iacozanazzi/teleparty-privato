@@ -1,0 +1,9 @@
+# Blueprint per Render: crea il servizio del server delle stanze sul piano gratuito.
+services:
+  - type: web
+    name: watch-party-stanze
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/index.js
+    healthCheckPath: /

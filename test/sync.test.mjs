@@ -69,6 +69,12 @@ try {
   const positions = await expectAligned([a, b, c], true, 'C entra dopo e si allinea');
   assert.ok(Math.min(...positions) > 120000, 'nessuno è stato riportato indietro');
 
+  // La connessione cade (rete, riavvio di Render): le schede si ricollegano da sole.
+  for (const client of server.wss.clients) client.terminate();
+  await sleep(2500);
+  await a.evaluate(() => userPause());
+  await expectAligned([a, b, c], false, 'dopo una caduta della connessione la sync riprende');
+
   console.log('OK: sincronizzazione verificata');
 } finally {
   await ctx.close();
