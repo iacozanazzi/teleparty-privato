@@ -1,10 +1,11 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Finto Netflix</title>
-<video id="v"></video>
+<div id="player"><video id="v"></video><button id="fullscreen" onclick="playerEl.requestFullscreen()">Schermo intero</button></div>
 <script>
   // Imita la forma dell'API interna di Netflix quanto basta per i test, con il tempo che scorre.
   const video = document.getElementById('v');
+  const playerEl = document.getElementById('player');
   const fake = { paused: true, baseMs: 0, since: 0 };
   const emit = (name) => video.dispatchEvent(new Event(name));
   const now = () => performance.now();

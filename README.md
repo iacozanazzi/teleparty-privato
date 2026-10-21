@@ -6,7 +6,8 @@ Estensione Chrome per guardare Netflix in sincrono con gli amici. Uso personale,
 
 - Fase 1 provata su Netflix vero il 20 ottobre 2026: il seek di 60 secondi funziona senza errori.
 - Fase 2: più schede nella stessa stanza restano allineate su play, pausa e posizione.
-- Fase 3: il pulsante dell'estensione crea una stanza e copia il link di invito; il server va su Render.
+- Fase 3: il pulsante dell'estensione crea una stanza e copia il link di invito; il server è su Render.
+- Videochiamata tra due persone, in un riquadro sopra Netflix.
 
 ## Come si usa
 
@@ -16,6 +17,20 @@ Estensione Chrome per guardare Netflix in sincrono con gli amici. Uso personale,
 4. Play, pausa e salti di chiunque valgono per tutti. Il pannello mostra quante persone ci sono.
 
 La prima connessione della serata può impiegare circa un minuto: il server gratuito di Render dorme dopo 15 minuti senza uso e si sveglia alla prima richiesta.
+
+## Videochiamata
+
+Funziona tra due persone nella stessa stanza.
+
+1. Dal pannello dell'estensione clicca "Avvia videochiamata". Chrome chiede il permesso per camera e microfono: consenti.
+2. L'altra persona fa lo stesso dal suo pannello.
+3. Vi vedete in un riquadro in basso a destra, anche a schermo intero. I pulsanti spengono microfono e camera o chiudono la chiamata.
+
+Audio e video vanno direttamente da un computer all'altro (WebRTC): il server su Render passa solo i messaggi per mettervi in contatto. Usate le cuffie, altrimenti il microfono riprende l'audio del film.
+
+Se Netflix blocca la camera nel riquadro, compare "Apri in una finestra": la chiamata si apre in una piccola finestra separata, che però non si vede sopra Netflix a schermo intero.
+
+Se il collegamento non riesce ("la vostra rete richiede un server TURN"), una delle due reti blocca il collegamento diretto, succede spesso con l'hotspot del telefono o le reti aziendali. Serve un server TURN che faccia da ponte: esistono servizi con un piano gratuito, ma richiedono un account.
 
 ## Installare l'estensione (tu e gli amici)
 
@@ -59,7 +74,7 @@ npm install
 npm test
 ```
 
-Carica l'estensione vera in Chromium e la prova su una pagina che imita l'API interna di Netflix (`test/mock-netflix.html`). `test/extension.test.mjs` verifica i comandi al player e la marcatura dell'eco; `test/sync.test.mjs` avvia il server e controlla che tre schede nella stessa stanza restino entro un secondo l'una dall'altra, anche dopo una caduta della connessione; `test/invite.test.mjs` crea una stanza dal popup, fa entrare un amico col link e lo fa uscire. Non sostituiscono la prova su Netflix vero.
+Carica l'estensione vera in Chromium e la prova su una pagina che imita l'API interna di Netflix (`test/mock-netflix.html`). `test/extension.test.mjs` verifica i comandi al player e la marcatura dell'eco; `test/sync.test.mjs` avvia il server e controlla che tre schede nella stessa stanza restino entro un secondo l'una dall'altra, anche dopo una caduta della connessione; `test/invite.test.mjs` crea una stanza dal popup, fa entrare un amico col link e lo fa uscire; `test/video.test.mjs` collega due schede in videochiamata con una camera finta, anche a schermo intero. Il test video apre finestre vere di Chrome: su Linux senza schermo va lanciato con `xvfb-run -a npm test`. Non sostituiscono la prova su Netflix vero.
 
 ## Struttura
 
@@ -70,6 +85,7 @@ Carica l'estensione vera in Chromium e la prova su una pagina che imita l'API in
 | `extension/background.js` | Service worker: tiene la connessione WebSocket di ogni scheda e si ricollega se cade |
 | `extension/popup.html`, `popup.js` | Pannello: crea stanza, copia link, esci |
 | `extension/config.js` | Indirizzo del server |
+| `extension/video.html`, `video.js` | Videochiamata WebRTC, nel riquadro o in una finestra |
 | `server/index.js` | Server delle stanze |
 | `render.yaml` | Configurazione del servizio su Render |
 | `spike/console-test.js` | Prova da console, senza estensione |

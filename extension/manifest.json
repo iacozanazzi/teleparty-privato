@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Watch Party (personale)",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Guarda Netflix in sincrono con gli amici. Uso personale.",
   "content_scripts": [
     {
@@ -37,5 +37,15 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "Watch Party"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "video.html"
+      ],
+      "matches": [
+        "https://www.netflix.com/*"
+      ]
+    }
+  ]
 }
