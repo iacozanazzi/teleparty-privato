@@ -10,7 +10,7 @@
   const GRACE_MS = 3000;
   const PING_EVERY_MS = 20000;
 
-  const room = readRoom();
+  let room = readRoom();
   let port = null;
   let joined = false;
   let members = 0;
@@ -26,6 +26,13 @@
     // Netflix può riscrivere l'URL: la stanza resta legata alla scheda.
     if (fromUrl) sessionStorage.setItem('wpRoom', fromUrl);
     return fromUrl ?? sessionStorage.getItem('wpRoom');
+  }
+
+  function setRoomInUrl(id) {
+    const url = new URL(location.href);
+    if (id) url.searchParams.set('wpRoom', id);
+    else url.searchParams.delete('wpRoom');
+    history.replaceState(history.state, '', url);
   }
 
   const serverNow = () => Date.now() + offsetMs;
@@ -90,6 +97,16 @@
     port.postMessage({ type: 'join', room });
   }
 
+  // Stanza vuota: chi entra mentre sta già guardando porta la sua posizione, così chi arriva dopo
+  // si allinea a lui invece di restare all'inizio.
+  async function publishLocalState() {
+    const local = await ask('state');
+    markReady(local);
+    if (!local.ready || roomState || !joined) return;
+    roomState = { playing: local.playing, positionMs: local.positionMs, atServer: serverNow() };
+    port.postMessage({ type: 'update', ...roomState });
+  }
+
   function onServerMessage(msg) {
     if (msg.type === 'welcome') {
       offsetMs = msg.serverTime - Date.now();
@@ -98,7 +115,8 @@
       roomState = msg.state;
       // Più ping all'inizio: vale il campione con il viaggio più breve, come in NTP.
       for (let i = 0; i < 5; i++) setTimeout(ping, i * 200);
-      reconcile();
+      if (roomState) reconcile();
+      else publishLocalState();
     } else if (msg.type === 'pong') {
       const rtt = Date.now() - msg.t0;
       if (rtt <= bestRttMs) {
@@ -162,9 +180,19 @@
       if (room && !videoFrame) openVideo();
       else closeVideo();
       reply({ video: Boolean(videoFrame) });
+    } else if (msg.type === 'join') {
+      // Si entra senza ricaricare: su Prime Video ricaricare chiuderebbe il player.
+      if (!room) {
+        room = msg.room;
+        sessionStorage.setItem('wpRoom', room);
+        setRoomInUrl(room);
+        connect();
+      }
+      reply({ room });
     } else if (msg.type === 'leave') {
       closeVideo();
       sessionStorage.removeItem('wpRoom');
+      setRoomInUrl(null);
       room = null;
       joined = false;
       port?.disconnect();
@@ -172,8 +200,7 @@
     }
   });
 
-  if (!room) return;
-  connect();
+  if (room) connect();
 
   setInterval(() => joined && room && reconcile(), CHECK_EVERY_MS);
   // Tiene sveglio il service worker e aggiorna la misura dell'orologio.

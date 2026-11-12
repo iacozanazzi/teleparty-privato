@@ -1,12 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Watch Party (personale)",
-  "version": "0.4.0",
-  "description": "Guarda Netflix in sincrono con gli amici. Uso personale.",
+  "version": "0.5.0",
+  "description": "Guarda Netflix e Prime Video in sincrono con gli amici. Uso personale.",
   "content_scripts": [
     {
       "matches": [
-        "https://www.netflix.com/*"
+        "https://www.netflix.com/*",
+        "https://www.primevideo.com/*",
+        "https://www.amazon.it/gp/video/*",
+        "https://www.amazon.com/gp/video/*",
+        "https://www.amazon.de/gp/video/*",
+        "https://www.amazon.co.uk/gp/video/*",
+        "https://www.amazon.fr/gp/video/*",
+        "https://www.amazon.es/gp/video/*"
       ],
       "js": [
         "page.js"
@@ -16,7 +23,14 @@
     },
     {
       "matches": [
-        "https://www.netflix.com/*"
+        "https://www.netflix.com/*",
+        "https://www.primevideo.com/*",
+        "https://www.amazon.it/gp/video/*",
+        "https://www.amazon.com/gp/video/*",
+        "https://www.amazon.de/gp/video/*",
+        "https://www.amazon.co.uk/gp/video/*",
+        "https://www.amazon.fr/gp/video/*",
+        "https://www.amazon.es/gp/video/*"
       ],
       "js": [
         "content.js"
@@ -32,7 +46,14 @@
     "clipboardWrite"
   ],
   "host_permissions": [
-    "https://www.netflix.com/*"
+    "https://www.netflix.com/*",
+    "https://www.primevideo.com/*",
+    "https://www.amazon.it/gp/video/*",
+    "https://www.amazon.com/gp/video/*",
+    "https://www.amazon.de/gp/video/*",
+    "https://www.amazon.co.uk/gp/video/*",
+    "https://www.amazon.fr/gp/video/*",
+    "https://www.amazon.es/gp/video/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -44,7 +65,14 @@
         "video.html"
       ],
       "matches": [
-        "https://www.netflix.com/*"
+        "https://www.netflix.com/*",
+        "https://www.primevideo.com/*",
+        "https://www.amazon.it/*",
+        "https://www.amazon.com/*",
+        "https://www.amazon.de/*",
+        "https://www.amazon.co.uk/*",
+        "https://www.amazon.fr/*",
+        "https://www.amazon.es/*"
       ]
     }
   ]

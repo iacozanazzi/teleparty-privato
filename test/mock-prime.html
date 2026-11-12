@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Finto Prime Video</title>
+<div id="trailer"><video width="160" height="90"></video></div>
+<div id="player-host"></div>
+<script>
+  // Imita il player di Prime Video: un <video> normale, qui dentro uno shadow root, con il tempo che scorre.
+  // Le proprietà del <video> sono simulate: nei test non c'è un vero file video.
+  const root = document.getElementById('player-host').attachShadow({ mode: 'open' });
+  const video = document.createElement('video');
+  video.style.cssText = 'width: 640px; height: 360px; display: block';
+  root.append(video);
+  const fake = { paused: true, baseMs: 0, since: 0 };
+  const now = () => performance.now();
+  const timeMs = () => (fake.paused ? fake.baseMs : fake.baseMs + now() - fake.since);
+  const emit = (name) => video.dispatchEvent(new Event(name));
+  Object.defineProperties(video, {
+    readyState: { get: () => 4 },
+    duration: { get: () => 5400 },
+    paused: { get: () => fake.paused },
+    currentTime: {
+      get: () => timeMs() / 1000,
+      set: (s) => { fake.baseMs = s * 1000; fake.since = now(); emit('seeked'); },
+    },
+  });
+  // Come un vero <video>: nessun evento se lo stato non cambia.
+  video.play = async () => { if (fake.paused) { fake.since = now(); fake.paused = false; emit('play'); } };
+  video.pause = () => { if (!fake.paused) { fake.baseMs = timeMs(); fake.paused = true; emit('pause'); } };
+  // Simulano azioni dell'utente, non comandi remoti.
+  window.userPlay = () => video.play();
+  window.userPause = () => video.pause();
+  window.userSeek = (ms) => (video.currentTime = ms / 1000);
+</script>
