@@ -1,6 +1,6 @@
 # Watch Party
 
-Estensione Chrome per guardare Netflix in sincrono con gli amici. Uso personale, codice scritto da zero: nessun file di Teleparty.
+Estensione Chrome per guardare Netflix e Prime Video in sincrono con gli amici. Uso personale, codice scritto da zero: nessun file di Teleparty.
 
 ## Stato: fase 3, server online e link di invito
 
@@ -8,15 +8,22 @@ Estensione Chrome per guardare Netflix in sincrono con gli amici. Uso personale,
 - Fase 2: più schede nella stessa stanza restano allineate su play, pausa e posizione.
 - Fase 3: il pulsante dell'estensione crea una stanza e copia il link di invito; il server è su Render.
 - Videochiamata tra due persone, in un riquadro sopra Netflix.
+- Prime Video (primevideo.com e amazon.it/.com/.de/.co.uk/.fr/.es nella sezione video): stessa sync, stanza e videochiamata. Provato solo su una pagina finta.
 
 ## Come si usa
 
-1. Apri un titolo su Netflix.
+1. Apri un titolo su Netflix o Prime Video. Su Prime Video puoi creare la stanza anche con il film già in riproduzione: la pagina non si ricarica.
 2. Clicca l'icona di Watch Party nella barra di Chrome, poi "Crea stanza". Il link viene copiato.
 3. Manda il link agli amici. Quando lo aprono, con l'estensione installata, entrano nella stanza.
 4. Play, pausa e salti di chiunque valgono per tutti. Il pannello mostra quante persone ci sono.
 
 La prima connessione della serata può impiegare circa un minuto: il server gratuito di Render dorme dopo 15 minuti senza uso e si sveglia alla prima richiesta.
+
+## Prime Video
+
+Prime Video usa un normale elemento `<video>`: l'estensione sceglie il più grande con un film caricato, ignorando trailer e anteprime, e lo cerca anche dentro gli shadow root. Il link di invito è l'indirizzo della pagina in cui sei, con la stanza aggiunta. Chi lo apre arriva sulla pagina del titolo e, quando preme play, si allinea a chi è già nella stanza.
+
+Limiti da verificare su Prime Video vero: le pubblicità del piano con annunci possono essere diverse tra le due persone e far perdere il sync finché non finiscono; se Amazon cambia il player, va aggiornato l'adattatore in `extension/page.js`.
 
 ## Videochiamata
 
@@ -74,13 +81,13 @@ npm install
 npm test
 ```
 
-Carica l'estensione vera in Chromium e la prova su una pagina che imita l'API interna di Netflix (`test/mock-netflix.html`). `test/extension.test.mjs` verifica i comandi al player e la marcatura dell'eco; `test/sync.test.mjs` avvia il server e controlla che tre schede nella stessa stanza restino entro un secondo l'una dall'altra, anche dopo una caduta della connessione; `test/invite.test.mjs` crea una stanza dal popup, fa entrare un amico col link e lo fa uscire; `test/video.test.mjs` collega due schede in videochiamata con una camera finta, anche a schermo intero. Il test video apre finestre vere di Chrome: su Linux senza schermo va lanciato con `xvfb-run -a npm test`. Non sostituiscono la prova su Netflix vero.
+Carica l'estensione vera in Chromium e la prova su una pagina che imita l'API interna di Netflix (`test/mock-netflix.html`). `test/extension.test.mjs` verifica i comandi al player e la marcatura dell'eco; `test/sync.test.mjs` avvia il server e controlla che tre schede nella stessa stanza restino entro un secondo l'una dall'altra, anche dopo una caduta della connessione; `test/invite.test.mjs` crea una stanza dal popup, fa entrare un amico col link e lo fa uscire; `test/prime.test.mjs` fa lo stesso su una finta pagina Prime Video con il video in uno shadow root; `test/video.test.mjs` collega due schede in videochiamata con una camera finta, anche a schermo intero. Il test video apre finestre vere di Chrome: su Linux senza schermo va lanciato con `xvfb-run -a npm test`. Non sostituiscono la prova su Netflix vero.
 
 ## Struttura
 
 | File | Ruolo |
 | --- | --- |
-| `extension/page.js` | Gira nel mondo della pagina, unico file che tocca l'API di Netflix |
+| `extension/page.js` | Gira nel mondo della pagina: adattatori per il player di Netflix e di Prime Video |
 | `extension/content.js` | Gira nel mondo isolato: ponte tra player e server, correzione dello scarto |
 | `extension/background.js` | Service worker: tiene la connessione WebSocket di ogni scheda e si ricollega se cade |
 | `extension/popup.html`, `popup.js` | Pannello: crea stanza, copia link, esci |
