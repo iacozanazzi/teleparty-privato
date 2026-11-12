@@ -54,7 +54,9 @@
   async function reconcile() {
     const local = await ask('state');
     markReady(local);
-    if (!roomState || !local.ready) return;
+    // Durante una pubblicità non si corregge: la posizione del film è ferma. Finita la pubblicità,
+    // il controllo periodico riporta il film dove sono gli altri.
+    if (!roomState || !local.ready || local.ad) return;
     const target = expectedPosition(roomState);
     if (Math.abs(local.positionMs - target) > DRIFT_MS) await ask('seek', Math.round(target));
     if (local.playing !== roomState.playing) await ask(roomState.playing ? 'play' : 'pause');
@@ -62,8 +64,9 @@
 
   function onLocalEvent(e) {
     markReady(e);
-    if (!joined || e.echo || !e.ready || !['play', 'pause', 'seeked'].includes(e.event)) return;
-    if (Date.now() - readySince < GRACE_MS) return void reconcile();
+    if (!joined || e.echo || !e.ready || e.ad || !['play', 'pause', 'seeked'].includes(e.event)) return;
+    // Appena il film parte ci si allinea alla stanza; se la stanza è vuota, la si apre con la propria posizione.
+    if (Date.now() - readySince < GRACE_MS) return void (roomState ? reconcile() : publishLocalState());
     if (
       roomState &&
       e.playing === roomState.playing &&
@@ -102,7 +105,7 @@
   async function publishLocalState() {
     const local = await ask('state');
     markReady(local);
-    if (!local.ready || roomState || !joined) return;
+    if (!local.ready || local.ad || roomState || !joined) return;
     roomState = { playing: local.playing, positionMs: local.positionMs, atServer: serverNow() };
     port.postMessage({ type: 'update', ...roomState });
   }

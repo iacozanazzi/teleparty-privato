@@ -24,7 +24,7 @@ await page.goto('https://www.netflix.com/watch/81234567');
 await page.waitForFunction(() => window.__watchParty);
 
 assert.deepEqual(await page.evaluate(() => __watchParty.state()),
-  { ready: true, playing: false, positionMs: 0, titleId: '81234567' });
+  { ready: true, playing: false, positionMs: 0, titleId: '81234567', ad: false });
 
 await page.evaluate(() => __watchParty.play());
 await page.evaluate(() => __watchParty.seek(60000));

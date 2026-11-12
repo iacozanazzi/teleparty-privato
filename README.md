@@ -21,9 +21,9 @@ La prima connessione della serata può impiegare circa un minuto: il server grat
 
 ## Prime Video
 
-Prime Video usa un normale elemento `<video>`: l'estensione sceglie il più grande con un film caricato, ignorando trailer e anteprime, e lo cerca anche dentro gli shadow root. Il link di invito è l'indirizzo della pagina in cui sei, con la stanza aggiunta. Chi lo apre arriva sulla pagina del titolo e, quando preme play, si allinea a chi è già nella stanza.
+Prime Video usa un normale elemento `<video>`. Il film è quello dentro `#dv-web-player`; il trailer muto che parte da solo nella pagina del titolo (`.draper-player-container`) viene ignorato. Struttura verificata sul player vero il 12 novembre 2026, insieme al fatto che `currentTime`, play e pausa sul `<video>` funzionano senza errori. Il link di invito è l'indirizzo della pagina in cui sei, con la stanza aggiunta. Chi lo apre arriva sulla pagina del titolo e, quando preme play, si allinea a chi è già nella stanza.
 
-Limiti da verificare su Prime Video vero: le pubblicità del piano con annunci possono essere diverse tra le due persone e far perdere il sync finché non finiscono; se Amazon cambia il player, va aggiornato l'adattatore in `extension/page.js`.
+Durante una pubblicità (riconosciuta da un'etichetta "Annuncio"/"Ad" o da un timer nel player) il sync di quella persona si sospende: gli altri continuano e, finita la pubblicità, il film salta dove sono loro. Il riconoscimento non è ancora stato provato su una pubblicità vera; se Amazon cambia il player, va aggiornato l'adattatore in `extension/page.js`.
 
 ## Videochiamata
 

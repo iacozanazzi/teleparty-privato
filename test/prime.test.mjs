@@ -1,5 +1,6 @@
-// Prime Video: stanza creata dal popup senza ricaricare la pagina, sync tra due schede,
-// con il <video> dentro uno shadow root e un trailer da ignorare. Uso: node test/prime.test.mjs
+// Prime Video: il trailer della pagina del titolo va ignorato, la stanza si crea senza ricaricare,
+// chi entra si allinea quando preme "Guarda ora", la pubblicità di uno non ferma gli altri.
+// Uso: node test/prime.test.mjs
 import { chromium } from 'playwright';
 import { readFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -47,14 +48,20 @@ async function openPopup(page) {
 
 const state = (page) => page.evaluate(() => __watchParty.state());
 
+const watchNow = (page) => page.click('#play-button');
+
 try {
   const host = await openTitle(TITLE_URL);
+  assert.equal((await state(host)).ready, false, 'il trailer della pagina non conta come film');
+  await watchNow(host);
   const s0 = await state(host);
-  assert.equal(s0.ready, true, 'trova il video nello shadow root');
+  assert.equal(s0.ready, true, 'trova il film in #dv-web-player');
   assert.equal(s0.titleId, '0TESTASIN123');
+  assert.ok(s0.positionMs >= 300000, 'è il film, non il trailer');
+  console.log('ok il trailer della pagina viene ignorato e il film trovato');
 
   // L'utente sta già guardando: creare la stanza non deve ricaricare la pagina né fermare il film.
-  await host.evaluate(() => { userPlay(); window.__marker = 'non ricaricata'; });
+  await host.evaluate(() => (window.__marker = 'non ricaricata'));
   let popup = await openPopup(host);
   assert.equal(await popup.textContent('#message'), 'Crea una stanza e manda il link a chi vuoi.');
   await popup.click('#create');
@@ -66,25 +73,43 @@ try {
   assert.equal((await state(host)).playing, true, 'il film continua');
   console.log('ok la stanza si crea senza ricaricare la pagina');
 
+  // L'amico apre il link: sulla pagina del titolo gira il trailer, che non deve toccare la stanza.
   const friend = await openTitle(link);
-  await sleep(1000);
+  await sleep(5000);
   popup = await openPopup(friend);
   assert.equal(await popup.textContent('#message'), 'Sei in una stanza con 2 persone.');
   await popup.close();
+  const hostBefore = await state(host);
+  assert.equal(hostBefore.playing, true, 'il trailer dell\'amico non ferma chi ospita');
+  assert.ok(hostBefore.positionMs > 300000, 'il trailer dell\'amico non sposta chi ospita');
 
-  // L'amico preme play sulla pagina del titolo: si allinea a chi ospita invece di partire da zero.
-  await friend.evaluate(() => userPlay());
+  // L'amico preme "Guarda ora": il suo film riparte da un altro punto e si allinea a chi ospita.
+  await friend.evaluate(() => (window.RESUME_S = 20));
+  await watchNow(friend);
   await sleep(4000);
   let [h, f] = await Promise.all([state(host), state(friend)]);
   assert.equal(f.playing, true);
+  assert.ok(h.positionMs > 300000, `chi ospita non è stato riportato indietro (${h.positionMs})`);
   assert.ok(Math.abs(h.positionMs - f.positionMs) <= 1000, `scarto ${h.positionMs - f.positionMs}ms`);
-  console.log('ok l\'amico entra e si allinea');
+  console.log('ok l\'amico preme Guarda ora e si allinea');
 
-  await sleep(3500);
-  await friend.evaluate(() => userSeek(600000));
+  // Pubblicità solo per l'amico: chi ospita continua, e dopo la pubblicità l'amico lo raggiunge.
+  await friend.evaluate(() => showAd());
+  await sleep(4000);
+  [h, f] = await Promise.all([state(host), state(friend)]);
+  assert.equal(h.playing, true, 'la pubblicità dell\'amico non mette in pausa chi ospita');
+  assert.equal(f.ad, true, 'la pubblicità viene riconosciuta');
+  await friend.evaluate(() => hideAd());
+  await sleep(4500);
+  [h, f] = await Promise.all([state(host), state(friend)]);
+  assert.equal(f.playing, true);
+  assert.ok(Math.abs(h.positionMs - f.positionMs) <= 1000, `dopo la pubblicità scarto ${h.positionMs - f.positionMs}ms`);
+  console.log('ok la pubblicità di uno non ferma l\'altro e dopo si riallinea');
+
+  await friend.evaluate(() => userSeek(1200000));
   await sleep(1500);
   [h, f] = await Promise.all([state(host), state(friend)]);
-  assert.ok(h.positionMs >= 600000 && Math.abs(h.positionMs - f.positionMs) <= 1000, `seek: ${h.positionMs} / ${f.positionMs}`);
+  assert.ok(h.positionMs >= 1200000 && Math.abs(h.positionMs - f.positionMs) <= 1000, `seek: ${h.positionMs} / ${f.positionMs}`);
   await host.evaluate(() => userPause());
   await sleep(1500);
   [h, f] = await Promise.all([state(host), state(friend)]);
