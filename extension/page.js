@@ -22,6 +22,7 @@
       }
     },
     titleId: () => location.pathname.match(/\/watch\/(\d+)/)?.[1] ?? null,
+    inAd: () => false,
   };
 
   // Elementi <video> anche dentro gli shadow root, dove document.querySelectorAll non arriva.
@@ -33,12 +34,18 @@
     return found;
   }
 
-  // Prime Video: un normale <video>. Tra anteprime e trailer si sceglie il più grande con un film caricato.
+  // Prime Video: il film gira in un normale <video> dentro #dv-web-player. Nella pagina del titolo,
+  // fuori da quel contenitore, parte da solo un trailer muto (.draper-player-container): va ignorato,
+  // altrimenti chi apre il link verrebbe sincronizzato sul trailer.
+  const AD_TEXT = /^(annuncio|annunci|pubblicità|ad|ads)\b/i;
+  const AD_CLASS = /ad-?timer|ad-?indicator|ad-?countdown/i;
   const prime = {
     getVideo() {
+      const root = document.getElementById('dv-web-player');
+      if (!root) return null;
       let best = null;
       let bestArea = 0;
-      for (const video of allVideos()) {
+      for (const video of allVideos(root)) {
         const rect = video.getBoundingClientRect();
         const area = rect.width * rect.height;
         if (video.readyState > 0 && Number.isFinite(video.duration) && video.duration > 0 && area > bestArea) {
@@ -47,6 +54,17 @@
         }
       }
       return best;
+    },
+    // Durante una pubblicità il player mostra un conto alla rovescia. Non verificato su una pubblicità
+    // vera: si cerca un'etichetta "Annuncio"/"Ad" o una classe da timer della pubblicità.
+    inAd() {
+      const root = document.getElementById('dv-web-player');
+      if (!root) return false;
+      for (const el of root.querySelectorAll('*')) {
+        if (AD_CLASS.test(el.className?.toString() ?? '') && el.getClientRects().length) return true;
+        if (el.children.length === 0 && AD_TEXT.test(el.textContent.trim()) && el.getClientRects().length) return true;
+      }
+      return false;
     },
     getPlayer() {
       const video = prime.getVideo();
@@ -73,6 +91,7 @@
       playing: !player.isPaused(),
       positionMs: Math.round(player.getCurrentTime()),
       titleId: adapter.titleId(),
+      ad: adapter.inAd(),
     };
   }
 

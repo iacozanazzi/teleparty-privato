@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Watch Party (personale)",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Guarda Netflix e Prime Video in sincrono con gli amici. Uso personale.",
   "content_scripts": [
     {

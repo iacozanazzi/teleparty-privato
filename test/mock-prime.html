@@ -1,33 +1,63 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Finto Prime Video</title>
-<div id="trailer"><video width="160" height="90"></video></div>
-<div id="player-host"></div>
+<!-- Struttura presa dal player vero (novembre 2026): nella pagina del titolo un trailer muto parte
+     da solo dentro .draper-player-container; il film si apre in #dv-web-player solo dopo "Guarda ora". -->
+<div class="draper-player-container"><div class="atvwebplayersdk-video-surface"><video id="trailer" muted></video></div></div>
+<a id="play-button" href="#" data-automation-id="dp-atf-play-button">Guarda ora</a>
 <script>
-  // Imita il player di Prime Video: un <video> normale, qui dentro uno shadow root, con il tempo che scorre.
-  // Le proprietà del <video> sono simulate: nei test non c'è un vero file video.
-  const root = document.getElementById('player-host').attachShadow({ mode: 'open' });
-  const video = document.createElement('video');
-  video.style.cssText = 'width: 640px; height: 360px; display: block';
-  root.append(video);
-  const fake = { paused: true, baseMs: 0, since: 0 };
-  const now = () => performance.now();
-  const timeMs = () => (fake.paused ? fake.baseMs : fake.baseMs + now() - fake.since);
-  const emit = (name) => video.dispatchEvent(new Event(name));
-  Object.defineProperties(video, {
-    readyState: { get: () => 4 },
-    duration: { get: () => 5400 },
-    paused: { get: () => fake.paused },
-    currentTime: {
-      get: () => timeMs() / 1000,
-      set: (s) => { fake.baseMs = s * 1000; fake.since = now(); emit('seeked'); },
-    },
-  });
-  // Come un vero <video>: nessun evento se lo stato non cambia.
-  video.play = async () => { if (fake.paused) { fake.since = now(); fake.paused = false; emit('play'); } };
-  video.pause = () => { if (!fake.paused) { fake.baseMs = timeMs(); fake.paused = true; emit('pause'); } };
-  // Simulano azioni dell'utente, non comandi remoti.
-  window.userPlay = () => video.play();
-  window.userPause = () => video.pause();
-  window.userSeek = (ms) => (video.currentTime = ms / 1000);
+  // Le proprietà dei <video> sono simulate: nei test non c'è un vero file video.
+  function fakeVideo(video, durationS, startS) {
+    const fake = { paused: true, baseMs: startS * 1000, since: 0 };
+    const now = () => performance.now();
+    const timeMs = () => (fake.paused ? fake.baseMs : fake.baseMs + now() - fake.since);
+    const emit = (name) => video.dispatchEvent(new Event(name));
+    Object.defineProperties(video, {
+      readyState: { get: () => 4 },
+      duration: { get: () => durationS },
+      paused: { get: () => fake.paused },
+      currentTime: {
+        get: () => timeMs() / 1000,
+        set: (s) => { fake.baseMs = s * 1000; fake.since = now(); emit('seeked'); },
+      },
+    });
+    // Come un vero <video>: nessun evento se lo stato non cambia.
+    video.play = async () => { if (fake.paused) { fake.since = now(); fake.paused = false; emit('play'); } };
+    video.pause = () => { if (!fake.paused) { fake.baseMs = timeMs(); fake.paused = true; emit('pause'); } };
+    return video;
+  }
+
+  const trailer = fakeVideo(document.getElementById('trailer'), 50, 0);
+  trailer.style.cssText = 'width: 1100px; height: 620px; display: block';
+  trailer.play();
+
+  // Punto da cui riprende il film per questo utente ("Riprendi").
+  window.RESUME_S = 300;
+  let movie = null;
+  document.getElementById('play-button').onclick = (e) => {
+    e.preventDefault();
+    trailer.pause();
+    const player = document.createElement('div');
+    player.id = 'dv-web-player';
+    player.innerHTML = '<div class="atvwebplayersdk-video-surface"><video></video></div><div class="overlay"></div>';
+    document.body.append(player);
+    movie = fakeVideo(player.querySelector('video'), 6721, window.RESUME_S);
+    movie.style.cssText = 'width: 1100px; height: 800px; display: block';
+    movie.play();
+  };
+
+  // Pubblicità: compare un'etichetta con il conto alla rovescia e il film si ferma.
+  window.showAd = () => {
+    document.querySelector('#dv-web-player .overlay').innerHTML = '<span>Annuncio</span><span>0:15</span>';
+    movie.pause();
+  };
+  window.hideAd = () => {
+    document.querySelector('#dv-web-player .overlay').innerHTML = '';
+    movie.play();
+  };
+
+  // Simulano azioni dell'utente sul film, non comandi remoti.
+  window.userPlay = () => movie.play();
+  window.userPause = () => movie.pause();
+  window.userSeek = (ms) => (movie.currentTime = ms / 1000);
 </script>
