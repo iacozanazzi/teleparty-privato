@@ -37,7 +37,12 @@ Audio e video vanno direttamente da un computer all'altro (WebRTC): il server su
 
 Se Netflix blocca la camera nel riquadro, compare "Apri in una finestra": la chiamata si apre in una piccola finestra separata, che però non si vede sopra Netflix a schermo intero.
 
-Se il collegamento non riesce ("la vostra rete richiede un server TURN"), una delle due reti blocca il collegamento diretto, succede spesso con l'hotspot del telefono o le reti aziendali. Serve un server TURN che faccia da ponte: esistono servizi con un piano gratuito, ma richiedono un account.
+Se il collegamento diretto non riesce (succede spesso con l'hotspot del telefono o le reti aziendali), il video passa da un server TURN di Cloudflare che fa da ponte. Il server su Render genera credenziali temporanee (24 ore) e le manda all'estensione all'apertura della videochiamata, così la chiave non sta mai nell'estensione. Per attivarlo, su Render vanno impostate due variabili d'ambiente prese da Cloudflare (Realtime, TURN):
+
+- `TURN_KEY_ID`: il Turn Token ID
+- `TURN_KEY_API_TOKEN`: l'API Token
+
+Senza queste variabili, o se Cloudflare non risponde, la videochiamata usa solo STUN e su alcune reti non si collega. Il piano gratuito di Cloudflare copre 1000 GB al mese di traffico TURN, molto più di quanto serve.
 
 ## Installare l'estensione (tu e gli amici)
 
