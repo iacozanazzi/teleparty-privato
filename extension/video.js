@@ -6,9 +6,10 @@ import { SERVER_URL } from './config.js';
 const $ = (id) => document.getElementById(id);
 const room = new URLSearchParams(location.hash.slice(1)).get('room');
 const inFrame = window.top !== window;
-// STUN serve a scoprire il proprio indirizzo pubblico. Senza un server TURN alcune reti
-// (hotspot del telefono, reti aziendali) non riescono a collegarsi.
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+// STUN serve a scoprire il proprio indirizzo pubblico; TURN fa da ponte quando le reti
+// (hotspot del telefono, reti aziendali) bloccano il collegamento diretto. Il server della stanza
+// manda gli indirizzi giusti, con credenziali TURN temporanee; questi valgono solo se non lo fa.
+let iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
 
 let localStream = null;
 let ws = null;
@@ -51,9 +52,11 @@ function signal(data) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'signal', data }));
 }
 
+const usingTurn = () => iceServers.some((s) => [].concat(s.urls).some((u) => u.startsWith('turn')));
+
 function createPeer() {
   pc?.close();
-  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  pc = new RTCPeerConnection({ iceServers });
   for (const track of localStream.getTracks()) pc.addTrack(track, localStream);
 
   pc.ontrack = ({ streams }) => {
@@ -75,7 +78,9 @@ function createPeer() {
     if (pc.connectionState === 'connected') status('');
     else if (pc.connectionState === 'connecting') status('Collegamento in corso…');
     else if (pc.connectionState === 'failed') {
-      status('Collegamento non riuscito: la vostra rete richiede un server TURN.');
+      status(usingTurn()
+        ? 'Collegamento non riuscito, riprovo…'
+        : 'Collegamento non riuscito: la vostra rete richiede un server TURN, che sul server non è configurato.');
       pc.restartIce();
     }
   };
@@ -106,6 +111,7 @@ function connect() {
   ws = new WebSocket(`${SERVER_URL}?room=${encodeURIComponent(room)}&kind=video`);
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
+    if (msg.iceServers?.length) iceServers = msg.iceServers;
     if (msg.type === 'video-welcome') {
       // Chi entra per secondo è quello educato.
       polite = msg.peers > 0;
